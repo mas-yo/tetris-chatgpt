@@ -95,17 +95,20 @@
             });
         }
 
-        // ボードの行をクリア
+        // ボードの行をクリア（修正版）
         function clearRows() {
-            outer: for (let y = board.length - 1; y >= 0; --y) {
-                for (let x = 0; x < board[y].length; ++x) {
-                    if (board[y][x] === 0) {
-                        continue outer;
-                    }
+            let linesCleared = 0; // 消えた行数を数える
+            for (let y = board.length - 1; y >= 0; --y) {
+                if (board[y].every(cell => cell !== 0)) {
+                    // すべてのセルが埋まっている場合、その行を削除
+                    board.splice(y, 1);
+                    // 先頭に空行を追加
+                    board.unshift(Array(cols).fill(0));
+                    linesCleared++;
+                    y++; // 行が削除されたので、同じ位置でもう一度チェック
                 }
-                const row = board.splice(y, 1)[0].fill(0);
-                board.unshift(row);
             }
+            return linesCleared; // 消えた行数を返す
         }
 
         // テトリミノの描画
@@ -139,25 +142,17 @@
             drawPiece(piece);
         }
 
-        // 回転関数（回転回数を指定してテトリミノの形状を回転）
-        function rotateMatrix(matrix, times) {
-            let rotatedMatrix = matrix;
-            for (let i = 0; i < times; i++) {
-                rotatedMatrix = rotatedMatrix[0].map((_, index) =>
-                    rotatedMatrix.map(row => row[index]).reverse()
-                );
-            }
-            return rotatedMatrix;
-        }
-
         // テトリミノの落下
         function drop() {
             piece.pos.y++;
             if (collide(board, piece)) {
                 piece.pos.y--;
                 merge(board, piece);
+                let linesCleared = clearRows(); // 複数行の消去処理
+                if (linesCleared > 0) {
+                    console.log(`${linesCleared} lines cleared`);
+                }
                 resetPiece();
-                clearRows();
             }
             draw();
         }
@@ -192,6 +187,17 @@
             }
             draw();
         });
+
+        // 回転関数（回転回数を指定してテトリミノの形状を回転）
+        function rotateMatrix(matrix, times) {
+            let rotatedMatrix = matrix;
+            for (let i = 0; i < times; i++) {
+                rotatedMatrix = rotatedMatrix[0].map((_, index) =>
+                    rotatedMatrix.map(row => row[index]).reverse()
+                );
+            }
+            return rotatedMatrix;
+        }
 
         // ゲームループ
         let dropInterval = setInterval(drop, 1000);
