@@ -139,21 +139,15 @@
             drawPiece(piece);
         }
 
-        // テトリミノの回転
-        function rotate(piece) {
-            const temp = piece.shape.map((_, i) => piece.shape.map(row => row[i]).reverse());
-            const pos = piece.pos.x;
-            let offset = 1;
-            while (collide(board, { shape: temp, pos: piece.pos })) {
-                piece.pos.x += offset;
-                offset = -(offset + (offset > 0 ? 1 : -1));
-                if (offset > piece.shape[0].length) {
-                    piece.shape = temp;
-                    piece.pos.x = pos;
-                    return;
-                }
+        // 回転関数（回転回数を指定してテトリミノの形状を回転）
+        function rotateMatrix(matrix, times) {
+            let rotatedMatrix = matrix;
+            for (let i = 0; i < times; i++) {
+                rotatedMatrix = rotatedMatrix[0].map((_, index) =>
+                    rotatedMatrix.map(row => row[index]).reverse()
+                );
             }
-            piece.shape = temp;
+            return rotatedMatrix;
         }
 
         // テトリミノの落下
@@ -191,7 +185,10 @@
             } else if (event.key === 'ArrowDown') {
                 drop();
             } else if (event.key === 'ArrowUp') {
-                rotate(piece);
+                piece.shape = rotateMatrix(piece.shape, 1); // 1回回転
+                if (collide(board, piece)) {
+                    piece.shape = rotateMatrix(piece.shape, 3); // 回転を元に戻す
+                }
             }
             draw();
         });
