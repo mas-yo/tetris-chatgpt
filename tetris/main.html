@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #333;
+        }
+        canvas {
+            background-color: #000;
+            border: 2px solid #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game" width="300" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const context = canvas.getContext('2d');
+        const scale = 30; // 1ブロックのサイズ
+        const rows = 20;
+        const cols = 10;
+
+        context.scale(scale, scale);
+
+        // テトリミノの形状
+        const shapes = [
+            [[1, 1, 1, 1]], // I
+            [[1, 1, 1], [0, 1, 0]], // T
+            [[1, 1, 0], [0, 1, 1]], // S
+            [[0, 1, 1], [1, 1, 0]], // Z
+            [[1, 1], [1, 1]], // O
+            [[1, 1, 1], [1, 0, 0]], // L
+            [[1, 1, 1], [0, 0, 1]]  // J
+        ];
+
+        // 色
+        const colors = [
+            null,
+            'cyan',
+            'purple',
+            'green',
+            'red',
+            'yellow',
+            'orange',
+            'blue'
+        ];
+
+        // ゲームボード
+        const board = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+        // テトリミノの生成
+        function createPiece(type) {
+            return shapes[type].map(row => row.slice());
+        }
+
+        let piece = {
+            shape: createPiece(Math.floor(Math.random() * shapes.length)),
+            pos: { x: 3, y: 0 },
+            color: colors[Math.floor(Math.random() * colors.length)]
+        };
+
+        // 衝突判定
+        function collide(board, piece) {
+            for (let y = 0; y < piece.shape.length; ++y) {
+                for (let x = 0; x < piece.shape[y].length; ++x) {
+                    if (
+                        piece.shape[y][x] !== 0 &&
+                        (board[y + piece.pos.y] &&
+                        board[y + piece.pos.y][x + piece.pos.x]) !== 0
+                    ) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // テトリミノの固定
+        function merge(board, piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        board[y + piece.pos.y][x + piece.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        // ボードの行をクリア
+        function clearRows() {
+            outer: for (let y = board.length - 1; y >= 0; --y) {
+                for (let x = 0; x < board[y].length; ++x) {
+                    if (board[y][x] === 0) {
+                        continue outer;
+                    }
+                }
+                const row = board.splice(y, 1)[0].fill(0);
+                board.unshift(row);
+            }
+        }
+
+        // テトリミノの描画
+        function drawPiece(piece) {
+            context.fillStyle = piece.color;
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        context.fillRect(x + piece.pos.x, y + piece.pos.y, 1, 1);
+                    }
+                });
+            });
+        }
+
+        // ボードの描画
+        function drawBoard() {
+            board.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        context.fillStyle = colors[value];
+                        context.fillRect(x, y, 1, 1);
+                    }
+                });
+            });
+        }
+
+        // 描画処理
+        function draw() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            drawBoard();
+            drawPiece(piece);
+        }
+
+        // テトリミノの回転
+        function rotate(piece) {
+            const temp = piece.shape.map((_, i) => piece.shape.map(row => row[i]).reverse());
+            const pos = piece.pos.x;
+            let offset = 1;
+            while (collide(board, { shape: temp, pos: piece.pos })) {
+                piece.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > piece.shape[0].length) {
+                    piece.shape = temp;
+                    piece.pos.x = pos;
+                    return;
+                }
+            }
+            piece.shape = temp;
+        }
+
+        // テトリミノの落下
+        function drop() {
+            piece.pos.y++;
+            if (collide(board, piece)) {
+                piece.pos.y--;
+                merge(board, piece);
+                resetPiece();
+                clearRows();
+            }
+            draw();
+        }
+
+        // テトリミノのリセット
+        function resetPiece() {
+            piece.shape = createPiece(Math.floor(Math.random() * shapes.length));
+            piece.color = colors[Math.floor(Math.random() * colors.length)];
+            piece.pos.y = 0;
+            piece.pos.x = (cols / 2 | 0) - (piece.shape[0].length / 2 | 0);
+            if (collide(board, piece)) {
+                board.forEach(row => row.fill(0));
+                alert('Game Over');
+            }
+        }
+
+        // キー操作
+        document.addEventListener('keydown', event => {
+            if (event.key === 'ArrowLeft') {
+                piece.pos.x--;
+                if (collide(board, piece)) piece.pos.x++;
+            } else if (event.key === 'ArrowRight') {
+                piece.pos.x++;
+                if (collide(board, piece)) piece.pos.x--;
+            } else if (event.key === 'ArrowDown') {
+                drop();
+            } else if (event.key === 'ArrowUp') {
+                rotate(piece);
+            }
+            draw();
+        });
+
+        // ゲームループ
+        let dropInterval = setInterval(drop, 1000);
+    </script>
+</body>
+</html>
