@@ -142,20 +142,34 @@
         // テトリミノの回転（修正版）
         function rotate(piece) {
             const temp = piece.shape.map((_, i) => piece.shape.map(row => row[i]).reverse());
+
+            // 特殊なテトリミノ（I型など）を正しく回転させるための処理
+            if (piece.shape.length === 4) { 
+                // I型テトリミノの場合は、さらに調整を加える
+                const temp2 = [
+                    [piece.shape[3][0], piece.shape[2][0], piece.shape[1][0], piece.shape[0][0]],
+                    [piece.shape[3][1], piece.shape[2][1], piece.shape[1][1], piece.shape[0][1]],
+                    [piece.shape[3][2], piece.shape[2][2], piece.shape[1][2], piece.shape[0][2]],
+                    [piece.shape[3][3], piece.shape[2][3], piece.shape[1][3], piece.shape[0][3]]
+                ];
+                piece.shape = temp2;
+            } else {
+                piece.shape = temp;
+            }
+
             const posX = piece.pos.x;
             let offset = 1;
 
             // 回転後の形状が衝突していないか確認
-            while (collide(board, { shape: temp, pos: { x: piece.pos.x, y: piece.pos.y } })) {
+            while (collide(board, piece)) {
                 piece.pos.x += offset;
                 offset = -(offset + (offset > 0 ? 1 : -1));
                 if (offset > piece.shape[0].length) {
-                    return; // 回転できない場合はそのまま
+                    piece.shape = temp; // 回転を元に戻す
+                    piece.pos.x = posX; // 位置も元に戻す
+                    return;
                 }
             }
-
-            piece.shape = temp;
-            piece.pos.x = posX; // 位置を元に戻す
         }
 
         // テトリミノの落下
